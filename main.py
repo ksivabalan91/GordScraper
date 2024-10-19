@@ -1,4 +1,5 @@
-import os, re, csv, time
+import os, re
+import pandas as pd
 from login import login
 from dotenv import load_dotenv
 from selenium import webdriver
@@ -42,8 +43,8 @@ def main():
         print(f"{i/len(allScenes)*100}% done")
     print(f"Link library built, {len(linkSet)} links extracted")    
     
-    #! Export data to CSV
-    exportData('data.csv', linkSet)
+    #! Export data to excel
+    exportData('data.xlsx', linkSet)
     
     driver.close()
     return    
