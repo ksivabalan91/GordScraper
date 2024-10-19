@@ -83,14 +83,14 @@ def buildLinkLibrary(linkSet):
 
 def exportData(filename, linkSet):
     try:
-        with open(filename,mode='w', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Title','Download Link'])
-            for subtitle, link in linkSet:
-                writer.writerow([subtitle,link])
+        # Create a DataFrame from the linkSet
+        df = pd.DataFrame(linkSet, columns=['Title', 'Download Link'])
+        
+        # Export to Excel file
+        df.to_excel(filename, index=False)  # Set index=False to avoid writing row numbers
         print(f"Data has been exported to {filename}")
-    except:
-        print("Unable to export file")
+    except Exception as e:
+        print(f"Unable to export file: {e}")
     return
 
 if __name__ ==  "__main__":
