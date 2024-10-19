@@ -1,3 +1,5 @@
 .env
 **/venv
 data.csv
+data.xlsx
+IDMGCExt.crx
