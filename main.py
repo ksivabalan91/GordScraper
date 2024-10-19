@@ -1,7 +1,5 @@
-import os
-import re
-import csv
-import time
+import os, re, csv, time
+from login import login
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -17,12 +15,13 @@ driver = webdriver.Chrome()
 def main():
     allScenes = []
     linkSet = set()
+    
     #! LOGIN
     driver.get(MEMBER_URL)
     for i in range(1, MAX_ATTEMPTS +1):
         if("mem" not in driver.current_url):
             print(f"Login attempt:{i}")
-            login()
+            login(driver)
         else:
             break
     print("Successfully logged in!")
@@ -44,36 +43,9 @@ def main():
     
     #! Export data to CSV
     exportData('data.csv', linkSet)
-
-    #! Download files
-    download()
-
+    
     driver.close()
     return    
-
-def login():
-    # Agree to terms and condition
-    if "legal" in driver.current_url:
-        try:
-            agree_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, '//a[contains(@class, "link_emphasize") and contains(., "I AGREE: ENTER")]'))
-            )
-            agree_button.click()
-        except Exception as e:
-            print(f"Error finding or clicking the button: {e}")
-    
-    # goto login page
-    driver.get(LOGIN_URL)
-    try:
-        input_user = WebDriverWait(driver,10).until(EC.element_to_be_clickable((By.ID,"login")))
-        input_user.send_keys(os.getenv("USERNAME"))
-        input_password = driver.find_element(By.ID, "password")
-        input_password.send_keys(os.getenv("PASSWORD"))
-        driver.find_element(By.NAME,"commit").click()
-    except Exception as e:
-        print(f"Unable to login: {e}")
-
-    return
 
 def findAllScenes(allScenes):
     scene_links = driver.find_elements(By.XPATH, "//a[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'video clip')]")
@@ -99,8 +71,6 @@ def buildLinkLibrary(linkSet):
             print(f"{subtitle} >> {download_link}")
             linkSet.add((subtitle,download_link))
         except Exception as e:
-            # print ({e})
-            # Handle the case where video_caption is not found
             continue        
     return linkSet
 
@@ -111,9 +81,6 @@ def exportData(filename, linkSet):
         for subtitle, link in linkSet:
             writer.writerow([subtitle,link])
     print(f"Data has been exported to {filename}")
-    return
-
-def download(set):
     return
 
 if __name__ ==  "__main__":
