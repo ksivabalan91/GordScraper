@@ -28,17 +28,18 @@ def main():
 
     #! GET ALL SCENES
     allScenes = findAllScenes(allScenes)
-    for i in range(2,3):
+    for i in range(2,65):
         driver.get(f"{MEMBER_URL}/?page={i}")
         WebDriverWait(driver,10).until(EC.url_changes)
         allScenes = findAllScenes(allScenes)
     print(f"{len(allScenes)} scenes found")
 
     #! GET ALL DOWNLOAD LINKS
-    for scene in allScenes:
-        driver.get(scene)
+    for i in range(len(allScenes)):
+        driver.get(allScenes[i])
         WebDriverWait(driver,10).until(EC.url_changes)
         linkSet = buildLinkLibrary(linkSet)
+        print(f"{i/len(allScenes)*100}% done")
     print(f"Link library built, {len(linkSet)} links extracted")    
     
     #! Export data to CSV
@@ -48,18 +49,24 @@ def main():
     return    
 
 def findAllScenes(allScenes):
-    scene_links = driver.find_elements(By.XPATH, "//a[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'video clip')]")
-    for elem in scene_links:
-        link = elem.get_attribute("href")
-        allScenes.append(link)
+    try:
+        scene_links = driver.find_elements(By.XPATH, "//a[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'video clip')]")
+        for elem in scene_links:
+            link = elem.get_attribute("href")
+            allScenes.append(link)
+    except Exception as e:
+        print(e)
     return allScenes
 
 def buildLinkLibrary(linkSet):
-    main_content = driver.find_element(By.ID, "main_content")
-    sub_content = main_content.find_elements(By.TAG_NAME,"div")
-    
-    title = sub_content[0].find_element(By.TAG_NAME,"a").text
-    title = re.sub(r',?\s*page.*$', '', title).strip()
+    title =""
+    try:
+        main_content = driver.find_element(By.ID, "main_content")
+        sub_content = main_content.find_elements(By.TAG_NAME,"div")
+        title = sub_content[0].find_element(By.TAG_NAME,"a").text
+        title = re.sub(r',?\s*page.*$', '', title).strip()
+    except Exception as e:
+        print(e)
 
     for div in sub_content:
         try:
@@ -75,12 +82,15 @@ def buildLinkLibrary(linkSet):
     return linkSet
 
 def exportData(filename, linkSet):
-    with open(filename,mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(['Title','Download Link'])
-        for subtitle, link in linkSet:
-            writer.writerow([subtitle,link])
-    print(f"Data has been exported to {filename}")
+    try:
+        with open(filename,mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Title','Download Link'])
+            for subtitle, link in linkSet:
+                writer.writerow([subtitle,link])
+        print(f"Data has been exported to {filename}")
+    except:
+        print("Unable to export file")
     return
 
 if __name__ ==  "__main__":
