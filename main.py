@@ -1,13 +1,12 @@
 import os
 import re
+import csv
 import time
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
-# pt-[10px] pr-[15px] mb-5 h-[20px] text-zinc-300 text-xl leading-none
 
 load_dotenv(override=True)
 LOGIN_URL = os.getenv("LOGIN_URL")
@@ -31,7 +30,7 @@ def main():
 
     #! GET ALL SCENES
     findAllScenes()
-    for i in range(2,3):
+    for i in range(3,4):
         driver.get(f"{MEMBER_URL}/?page={i}")
         WebDriverWait(driver,10).until(EC.url_changes)
         findAllScenes()
@@ -42,11 +41,10 @@ def main():
         driver.get(scene)
         WebDriverWait(driver,10).until(EC.url_changes)
         buildLinkLibrary()
-    print(f"Link library built, {len(linkSet)} links extracted")
-    time.sleep(15)
+    print(f"Link library built, {len(linkSet)} links extracted")    
+    exportData('data.csv')
     driver.close()
-    return
-    
+    return    
 
 def login():
     # Agree to terms and condition
@@ -100,6 +98,15 @@ def buildLinkLibrary():
             # Handle the case where video_caption is not found
             continue        
     return
+
+def exportData(filename):
+    with open(filename,mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Title','Download Link'])
+        for subtitle, link in linkSet:
+            writer.writerow([subtitle,link])
+    print(f"Data has been exported to {filename}")
+    return    
 
 if __name__ ==  "__main__":
     main()
