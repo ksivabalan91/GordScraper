@@ -14,10 +14,9 @@ MEMBER_URL = os.getenv("MEMBER_URL")
 MAX_ATTEMPTS = 3
 driver = webdriver.Chrome()
 
-allScenes = []
-linkSet = set()
-
 def main():
+    allScenes = []
+    linkSet = set()
     #! LOGIN
     driver.get(MEMBER_URL)
     for i in range(1, MAX_ATTEMPTS +1):
@@ -29,20 +28,26 @@ def main():
     print("Successfully logged in!")
 
     #! GET ALL SCENES
-    findAllScenes()
-    for i in range(3,4):
+    allScenes = findAllScenes(allScenes)
+    for i in range(2,3):
         driver.get(f"{MEMBER_URL}/?page={i}")
         WebDriverWait(driver,10).until(EC.url_changes)
-        findAllScenes()
+        allScenes = findAllScenes(allScenes)
     print(f"{len(allScenes)} scenes found")
 
     #! GET ALL DOWNLOAD LINKS
     for scene in allScenes:
         driver.get(scene)
         WebDriverWait(driver,10).until(EC.url_changes)
-        buildLinkLibrary()
+        linkSet = buildLinkLibrary(linkSet)
     print(f"Link library built, {len(linkSet)} links extracted")    
-    exportData('data.csv')
+    
+    #! Export data to CSV
+    exportData('data.csv', linkSet)
+
+    #! Download files
+    download()
+
     driver.close()
     return    
 
@@ -70,14 +75,14 @@ def login():
 
     return
 
-def findAllScenes():
+def findAllScenes(allScenes):
     scene_links = driver.find_elements(By.XPATH, "//a[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'video clip')]")
     for elem in scene_links:
         link = elem.get_attribute("href")
         allScenes.append(link)
-    return
+    return allScenes
 
-def buildLinkLibrary():
+def buildLinkLibrary(linkSet):
     main_content = driver.find_element(By.ID, "main_content")
     sub_content = main_content.find_elements(By.TAG_NAME,"div")
     
@@ -97,16 +102,19 @@ def buildLinkLibrary():
             # print ({e})
             # Handle the case where video_caption is not found
             continue        
-    return
+    return linkSet
 
-def exportData(filename):
+def exportData(filename, linkSet):
     with open(filename,mode='w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow(['Title','Download Link'])
         for subtitle, link in linkSet:
             writer.writerow([subtitle,link])
     print(f"Data has been exported to {filename}")
-    return    
+    return
+
+def download(set):
+    return
 
 if __name__ ==  "__main__":
     main()
