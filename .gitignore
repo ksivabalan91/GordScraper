@@ -1,5 +1,5 @@
 .env
 **/venv
-data.csv
-data.xlsx
+**/data
+**/extensions
 IDMGCExt.crx
