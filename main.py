@@ -7,10 +7,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+# Load environment variables
 load_dotenv(override=True)
-LOGIN_URL = os.getenv("LOGIN_URL")
 MEMBER_URL = os.getenv("MEMBER_URL")
-MAX_ATTEMPTS = 3
 driver = webdriver.Chrome()
 
 def main():
@@ -18,14 +17,7 @@ def main():
     linkSet = set()
     
     #! LOGIN
-    driver.get(MEMBER_URL)
-    for i in range(1, MAX_ATTEMPTS +1):
-        if("mem" not in driver.current_url):
-            print(f"Login attempt:{i}")
-            login(driver)
-        else:
-            break
-    print("Successfully logged in!")
+    login(driver)
 
     #! GET ALL SCENES
     allScenes = findAllScenes(allScenes)
@@ -36,23 +28,26 @@ def main():
     print(f"{len(allScenes)} scenes found")
 
     #! GET ALL DOWNLOAD LINKS
-    for i in range(len(allScenes)):
-        driver.get(allScenes[i])
+    for index, scene in enumerate(allScenes):
+        driver.get(scene)
         WebDriverWait(driver,10).until(EC.url_changes)
         linkSet = buildLinkLibrary(linkSet)
-        print(f"{i/len(allScenes)*100}% done")
+        print(f"{index}/{len(allScenes)}")
     print(f"Link library built, {len(linkSet)} links extracted")    
     
-    #! Export data to excel
-    exportData('data.xlsx', linkSet)
+    #! EXPORT DATA TO XLSX
+    exportData('./data/data2.xlsx', linkSet,['Title', 'Download Link'])
     
+    #! CLOSE DRIVER
     driver.close()
     return    
 
 def findAllScenes(allScenes):
     try:
+        # Look for "video clip" text on page and find element
         scene_links = driver.find_elements(By.XPATH, "//a[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'video clip')]")
         for elem in scene_links:
+            # Get the page link
             link = elem.get_attribute("href")
             allScenes.append(link)
     except Exception as e:
@@ -64,16 +59,22 @@ def buildLinkLibrary(linkSet):
     try:
         main_content = driver.find_element(By.ID, "main_content")
         sub_content = main_content.find_elements(By.TAG_NAME,"div")
+        # In the first div element, find a tag and get the text
         title = sub_content[0].find_element(By.TAG_NAME,"a").text
+        # Regex to drop 'page' text if any
         title = re.sub(r',?\s*page.*$', '', title).strip()
     except Exception as e:
         print(e)
 
     for div in sub_content:
         try:
+            # Find subtitle element
             video_caption_elem = div.find_element(By.CLASS_NAME, "video_caption")
+            # Add subtitle to main title for filename
             subtitle = f"{title} -- {video_caption_elem.find_element(By.TAG_NAME, "b").text.strip()}"
+            # Locate download link block
             download_elem = div.find_element(By.CLASS_NAME,"media_download_block")
+            # Only find elements with mp4 in its text 
             link_elem = download_elem.find_element(By.XPATH,".//a[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'mp4')]")
             download_link = link_elem.get_attribute('href')
             print(f"{subtitle} >> {download_link}")
@@ -82,13 +83,12 @@ def buildLinkLibrary(linkSet):
             continue        
     return linkSet
 
-def exportData(filename, linkSet):
+def exportData(filename, linkSet, columns):
     try:
         # Create a DataFrame from the linkSet
-        df = pd.DataFrame(linkSet, columns=['Title', 'Download Link'])
-        
+        df = pd.DataFrame(linkSet, columns=columns)        
         # Export to Excel file
-        df.to_excel(filename, index=False)  # Set index=False to avoid writing row numbers
+        df.to_excel(filename, index=False)
         print(f"Data has been exported to {filename}")
     except Exception as e:
         print(f"Unable to export file: {e}")
