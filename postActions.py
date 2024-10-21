@@ -1,19 +1,24 @@
 import os
 import pandas as pd
+from pandas import DataFrame
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv(override=True)
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR")
+assert DOWNLOAD_DIR, "Error: DOWNLOAD_DIR is not set."
 
-df = pd.read_excel('data.xlsx')
-df['Title']=df['Title'].apply(lambda x: x+'.mp4')
+df: DataFrame = pd.read_excel('data.xlsx')
+df['Title'] = df['Title'].apply(lambda x: x+'.mp4')
 
-def ensure_mp4_extension(source_folder):
+def ensure_mp4_extension(source_folder: str) -> None:
     # Iterate over all files in the source folder
     for file in os.listdir(source_folder):
-        # Check if the file doesn't already have a .mp4 extension
-        if not file.lower().endswith('.mp4'):
+        # Split the file name and its extension
+        file_name, file_extension = os.path.splitext(file)
+        
+        # Check if the file has no extension
+        if not file_extension:
             # Construct the old and new file paths
             old_file_path = os.path.join(source_folder, file)
             new_file_path = os.path.join(source_folder, file + '.mp4')
@@ -22,7 +27,7 @@ def ensure_mp4_extension(source_folder):
             os.rename(old_file_path, new_file_path)
             print(f"Renamed: {old_file_path} to {new_file_path}")
 
-def check_missed_downloads(source_folder, file_list):
+def check_missed_downloads(source_folder, file_list) -> None:
     # Get the list of files in the source folder
     files_in_folder = os.listdir(source_folder)
     
@@ -39,10 +44,8 @@ def check_missed_downloads(source_folder, file_list):
     print("\nExtra files in the folder:")
     for file in extra_files:
         print(file)
-    
-    # Return missed files for further processing if needed
-    return missed_files, extra_files
 
 # Example usage
-# ensure_mp4_extension(DOWNLOAD_DIR)
-check_missed_downloads(DOWNLOAD_DIR, list(df['Title']))
+if __name__ == "__main__":
+    ensure_mp4_extension(DOWNLOAD_DIR)
+    check_missed_downloads(DOWNLOAD_DIR, list(df['Title']))

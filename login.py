@@ -1,5 +1,4 @@
 import os
-from selenium import webdriver
 from dotenv import load_dotenv
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -12,29 +11,28 @@ LOGIN_URL = os.getenv("LOGIN_URL")
 USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
 
-def login(driver):
+# Assert that the environment variables are set
+assert MEMBER_URL, "Error: MEMBER_URL is not set."
+assert LOGIN_URL, "Error: LOGIN_URL is not set."
+assert USERNAME, "Error: USERNAME is not set."
+assert PASSWORD, "Error: PASSWORD is not set."
+
+def login(driver) -> None: 
     driver.get(MEMBER_URL)
+    wait = WebDriverWait(driver,10)
     # if redirected to /legal page, agree to agree to terms and conditions
     if "legal" in driver.current_url:
         try:
-            agree_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, '//a[contains(@class, "link_emphasize") and contains(., "I AGREE: ENTER")]'))
-            )
-            agree_button.click()
-        except Exception as e:
-            print(f"Error finding or clicking the button")
-            return e
+            wait.until(EC.element_to_be_clickable((By.XPATH, '//a[contains(@class, "link_emphasize") and contains(., "I AGREE: ENTER")]'))).click()
+        except:
+            raise Exception(f"Error finding or clicking 'I AGREE' the button")
     
     # Go to login page
     driver.get(LOGIN_URL)
     try:
         # Input credentials
-        input_user = WebDriverWait(driver,10).until(EC.element_to_be_clickable((By.ID,"login")))
-        input_user.send_keys(USERNAME)
-        input_password = driver.find_element(By.ID, "password")
-        input_password.send_keys(PASSWORD)
-        # Submit
-        driver.find_element(By.NAME,"commit").click()
-    except Exception as e:
-        print(f"Unable to login")
-        return e    
+        wait.until(EC.element_to_be_clickable((By.ID,"login"))).send_keys(USERNAME) # type: ignore
+        wait.until(EC.element_to_be_clickable((By.ID,"password"))).send_keys(PASSWORD) # type: ignore
+        wait.until(EC.element_to_be_clickable((By.NAME,"commit"))).click()
+    except:
+        raise Exception(f"Unable to login")

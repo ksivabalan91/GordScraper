@@ -1,6 +1,7 @@
 import os, re
 import pandas as pd
 from login import login
+from commons import timer
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -9,50 +10,57 @@ from selenium.webdriver.remote.webelement import WebElement
 # Load environment variables
 load_dotenv(override=True)
 MEMBER_URL: str | None = os.getenv("MEMBER_URL")
-driver = webdriver.Chrome()
+assert MEMBER_URL, "Error: MEMBER_URL is not set."
+
+# Set options and load WebDriver
+options = webdriver.ChromeOptions()
+driver = webdriver.Chrome(options=options)
+
+# Global variables
+linkSet: set = set()
+exportFileName = "data2"
 
 def main() -> None:
-    allScenes: list[str] = []
-    linkSet: set = set()
-    
     #! LOGIN
     login(driver)
 
     #! GET ALL SCENES
-    for i in range(1,65):
-        driver.get(f"{MEMBER_URL}/?page={i}")
-        print(f"Page {i}")
-        allScenes = findAllScenes(allScenes)
-    print(f"{len(allScenes)} scenes found")
+    allScenes: list[str] = []
+    for i in range(1, 65):
+        allScenes += findAllScenes(i)
+        print(f"Page: {i:,}/64")
+    print(f"{len(allScenes):,} scenes found")
 
     #! GET ALL DOWNLOAD LINKS
     for index, scene in enumerate(allScenes):
-        driver.get(scene)
-        linkSet = buildLinkLibrary(linkSet)
-        print(f"{index}/{len(allScenes)}")
+        buildLinkLibrary(scene)
+        print(f"{index+1}/{len(allScenes)}")
     print(f"Link library built, {len(linkSet)} links extracted")    
     
     #! EXPORT DATA TO XLSX
-    exportData('./data/data2.xlsx', linkSet,['Title', 'Download Link'])
+    exportData(f"./data/{exportFileName}.xlsx",dataSet=linkSet,columns=['Title', 'Download Link'])
     
     #! CLOSE DRIVER
     driver.close()
     return    
 
-def findAllScenes(allScenes: list[str]) -> list[str]:
+# @timer
+def findAllScenes(page: int) -> list[str]:
     try:
-        # Look for "video clip" text on page and find element
-        scene_links: list[WebElement] = driver.find_elements(By.XPATH, "//a[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'video clip')]") # type: ignore
-        for elem in scene_links:
-            # Get the page link
-            link: str | None = elem.get_attribute("href")
-            if link: allScenes.append(link)
+        driver.get(f"{MEMBER_URL}/?page={page}")
+        # Look for "video clip" text on page and find elements
+        scene_links: list[WebElement] = driver.find_elements(By.XPATH, "//a[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'video clip')]")
+        linksToAllScenesOnPage: list[str] = [
+            elem.get_attribute("href") for elem in scene_links if elem and elem.get_attribute("href") is not None
+        ]  # type: ignore
+        return linksToAllScenesOnPage  # Return directly from this page
     except Exception as e:
-        print(e)
-    return allScenes
+        print(f"Error on page {page}: {e}")
+        return []
 
-def buildLinkLibrary(linkSet: set) -> set:
-    title: str =""
+def buildLinkLibrary(scenePage:str) -> None:
+    driver.get(scenePage)
+    title: str = ""
     try:
         main_content: WebElement = driver.find_element(By.ID, "main_content")
         sub_content: list[WebElement] = main_content.find_elements(By.TAG_NAME,"div")
@@ -78,12 +86,11 @@ def buildLinkLibrary(linkSet: set) -> set:
             linkSet.add((subtitle,download_link))
         except Exception as e:
             continue        
-    return linkSet
 
-def exportData(filename, linkSet, columns) -> None:
+def exportData(filename, dataSet, columns) -> None:
     try:
         # Create a DataFrame from the linkSet
-        df = pd.DataFrame(linkSet, columns=columns)        
+        df = pd.DataFrame(dataSet, columns=columns)        
         # Export to Excel file
         df.to_excel(filename, index=False)
         print(f"Data has been exported to {filename}")

@@ -7,16 +7,16 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv(override=True)
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR")
+assert DOWNLOAD_DIR,"Error: DOWNLOAD_DIR is not set."
 
-df = loadData("missed_data.xlsx")
+df: pd.DataFrame = loadData("missed_data.xlsx")
 # extract original filenames from download link and remove URL encoding
 df['filename'] = df['Download Link'].apply(lambda x: x.split("/")[-1])
 df['filename'] = df['filename'].apply(lambda x: urllib.parse.unquote(x))
-
-# remove illegal characters for filenames
+# remove illegal characters for Titles
 df['Title'] = df['Title'].apply(lambda x: re.sub(r'[\/:*?"<>|]','_',x))
 
-def delete_duplicates(source_folder):
+def delete_duplicates(source_folder) -> None:
     # Regex pattern to match filenames ending with (1), (2), (3), etc., before the file extension
     pattern = re.compile(r".*\(\d+\)\.[a-zA-Z0-9]+$")
 
@@ -31,7 +31,7 @@ def delete_duplicates(source_folder):
         except Exception as e:
             print(f"Error deleting {file_path}: {e}")
 
-def rename_file(source_folder, old_filename, new_filename):
+def rename_file(source_folder, old_filename, new_filename) -> None:
     # Get the full path of the old and new filenames
     old_file_path = os.path.join(source_folder, old_filename)
     new_file_path = os.path.join(source_folder, new_filename)
@@ -49,7 +49,7 @@ def rename_file(source_folder, old_filename, new_filename):
         os.rename(old_file_path, new_file_path)
         # print(f'Renamed: {old_file_path} to {new_file_path}')
 
-def start():
+def start() -> None:
     delete_duplicates(DOWNLOAD_DIR)
     # Iterate over the files in the download directory
     for filename in os.listdir(DOWNLOAD_DIR):
